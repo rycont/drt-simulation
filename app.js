@@ -49,3 +49,14 @@ addEventListener('keydown', (e) => {
         const demand = addRandomDemand(world)
     } else if (e.key === 't') world.addTaxi(new Taxi())
 })
+
+const addTaxiButton = document.getElementById('new_taxi')
+addTaxiButton.addEventListener('click', () => {
+    world.addTaxi(new Taxi())
+})
+
+const addDemandButton = document.getElementById('new_demand')
+addDemandButton.addEventListener('click', () => {
+    addRandomDemand(world)
+})
+
