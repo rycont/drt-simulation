@@ -12,6 +12,7 @@ export class Demand {
     state = STATE.IDLE
     fromElement = document.createElement('div')
     toElement = document.createElement('div')
+    created = Date.now()
     from
     to
 
@@ -38,8 +39,8 @@ export class Demand {
             this.toElement.classList.remove('inactive')
             this.toElement.classList.add('active')
         } else if (state === STATE.DROPPED) {
-            this.toElement.classList.remove('active')
-            this.toElement.classList.add('inactive')
+            this.toElement.remove()
+            this.fromElement.remove()
         }
     }
 

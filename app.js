@@ -1,4 +1,4 @@
-import { Demand } from './demand.js'
+import { Demand, STATE } from './demand.js'
 import { Taxi } from './taxi.js'
 import { getRandomPoint } from './util.js'
 import { World } from './world.js'
@@ -16,14 +16,36 @@ function addRandomDemand(world) {
     const demand = new Demand(from, to)
     world.addDemand(demand)
 
+    demand.watchable.onChange('state', (state) => {
+        if (state === STATE.PICKED) {
+            waitedUntilRide.push(Date.now() - demand.created)
+            showStats()
+        } else if (state === STATE.DROPPED) {
+            waitedUntilArrive.push(Date.now() - demand.created)
+            showStats()
+
+            setTimeout(() => {
+                addRandomDemand(world)
+            }, 1000)
+        }
+    })
+
     return demand
 }
 
-addEventListener('keydown', (e) => {
-    if (e.key === 'r') addRandomDemand(world)
-})
+const waitedUntilRide = []
+const waitedUntilArrive = []
 
-// for (let i = 0; i < 20; i++) {
-//     addRandomDemand(world)
-//     await new Promise((resolve) => setTimeout(resolve, 800))
-// }
+const waitedUntilArriveElement = document.getElementById('waitedUntilArrive')
+const waitedUntilRideElement = document.getElementById('waitedUntilRide')
+
+function showStats() {
+    waitedUntilRideElement.innerText = waitedUntilRide.reduce((a, b) => a + b, 0) / waitedUntilRide.length / 1000
+    waitedUntilArriveElement.innerText = waitedUntilArrive.reduce((a, b) => a + b, 0) / waitedUntilArrive.length / 1000
+}
+
+addEventListener('keydown', (e) => {
+    if (e.key === 'r') {
+        const demand = addRandomDemand(world)
+    } else if (e.key === 't') world.addTaxi(new Taxi())
+})

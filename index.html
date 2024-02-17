@@ -67,20 +67,21 @@
     </head>
     <body>
         <div id="world"></div>
+        <ul>
+            <li>Press <kbd>R</kbd> to add a new demand</li>
+            <li>Press <kbd>T</kbd> to add a new taxi</li>
+        </ul>
         <table>
             <tr>
                 <td>대기시간</td>
-                <td id="wait_for">0</td>
+                <td id="waitedUntilRide">0</td>
             </tr>
             <tr>
                 <td>이동시간</td>
-                <td id="moving">0</td>
-            </tr>
-            <tr>
-                <td>수송 완료 시간</td>
-                <td id="duration">0</td>
+                <td id="waitedUntilArrive">0</td>
             </tr>
         </table>
+
         <script type="module" src="./app.js"></script>
     </body>
 </html>

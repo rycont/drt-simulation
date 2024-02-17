@@ -104,7 +104,7 @@ export class Router {
     }
 
     arrivedAtStop(stop) {
-        const onArrive = stop.demand.onArrive
+        const onArrive = stop.demand?.onArrive
         if (onArrive) onArrive()
 
         const demand = stop.demand

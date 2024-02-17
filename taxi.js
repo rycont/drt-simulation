@@ -63,7 +63,7 @@ export class Taxi {
 
             this.position = [x, y]
 
-            if (distance < 1) {
+            if (distance < 4) {
                 this.position = target
                 this.router.arrivedAtStop(this.stop)
             }
