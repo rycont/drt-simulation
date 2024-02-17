@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Document</title>
+        <link
+            rel="stylesheet"
+            href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css"
+        />
+
+        <style>
+            #world {
+                width: 600px;
+                height: 600px;
+                position: relative;
+                border-radius: 12px;
+                background-color: #f0f0f0;
+            }
+
+            .taxi {
+                width: 32px;
+                height: 32px;
+                background-color: rgb(168, 157, 52);
+                line-height: 32px;
+                position: absolute;
+                border-radius: 50%;
+                color: white;
+                text-align: center;
+                font-weight: bold;
+                z-index: 2;
+                transform: translate(-50%, -50%);
+            }
+
+            .demand {
+                width: 10px;
+                height: 10px;
+                position: absolute;
+                border-radius: 50%;
+                transform: translate(-50%, -50%);
+                z-index: 1;
+                transition: all 0.5s;
+            }
+
+            .demand.from {
+                background-color: rgb(255, 168, 168);
+            }
+
+            .demand.from.inactive {
+                background-color: rgb(190, 190, 190);
+            }
+
+            .demand.to {
+                background-color: rgb(138, 169, 255);
+            }
+
+            .demand.to.inactive {
+                display: none;
+            }
+
+            .line {
+                position: absolute;
+                border: 1px solid rgba(0, 0, 0, 0.2);
+                transform-origin: 0 0;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="world"></div>
+        <table>
+            <tr>
+                <td>대기시간</td>
+                <td id="wait_for">0</td>
+            </tr>
+            <tr>
+                <td>이동시간</td>
+                <td id="moving">0</td>
+            </tr>
+            <tr>
+                <td>수송 완료 시간</td>
+                <td id="duration">0</td>
+            </tr>
+        </table>
+        <script type="module" src="./app.js"></script>
+    </body>
+</html>
