@@ -1,4 +1,5 @@
 import { STATE } from './demand.js'
+import { Taxi } from './taxi.js'
 import { getDistance } from './util.js'
 import { PubSub, Watchable } from './watchable.js'
 
@@ -10,6 +11,8 @@ export class Router {
     demands = []
     route = []
 
+    static BEAM = 5
+
     taxi
 
     constructor(taxi) {
@@ -18,7 +21,7 @@ export class Router {
         this.watchable.onChange('route', this.onRouteChange.bind(this))
     }
 
-    getExtendedPathWithNewDemand(demand) {
+    getExtendedLengthWithNewDemand(demand) {
         if (this.demands.length === 0) return 1
 
         const demandsSnapshot = [...this.demands]
@@ -48,6 +51,12 @@ export class Router {
             .filter((demand) => demand.state === STATE.SELECTED)
             .map((demand) => ({
                 point: demand.from,
+                seatDelta: 1,
+                next: {
+                    point: demand.to,
+                    sheetDelta: -1,
+                    demand,
+                },
                 demand,
             }))
 
@@ -60,17 +69,51 @@ export class Router {
 
         const allStops = [...pickStops, ...dropStops]
 
+        // const allStops = [...pickStops]
+
         const { route } = beamSearch(
-            8,
+            Router.BEAM,
             this.taxi.position,
             allStops,
-            this.taxi.capacity - this.taxi.current
+            Taxi.CAPACITY - this.taxi.current
         )
+
         return route
     }
 
     select(demand) {
         demand.selectedBy(this.taxi)
+
+        if (this.route.length) {
+            const nearPointFromPickingPoint = this.route
+                .map((stop) => ({
+                    stop,
+                    distance: getDistance(stop.point, demand.from),
+                }))
+                .toSorted((a, b) => a.distance - b.distance)[0]
+
+            if (
+                nearPointFromPickingPoint &&
+                nearPointFromPickingPoint.distance < 80
+            ) {
+                demand.from = [...nearPointFromPickingPoint.stop.point]
+            }
+
+            const nearPointFromDropPoint = this.route
+                .map((stop) => ({
+                    stop,
+                    distance: getDistance(stop.point, demand.to),
+                }))
+                .toSorted((a, b) => a.distance - b.distance)[0]
+
+            if (
+                nearPointFromDropPoint &&
+                nearPointFromDropPoint.distance < 80
+            ) {
+                demand.to = [...nearPointFromDropPoint.stop.point]
+            }
+        }
+
         this.demands.push(demand)
 
         this.route = this.getProperPathFromDemands(this.demands)
@@ -100,7 +143,7 @@ export class Router {
             })
             .reduce((a, b) => a + b, 0)
 
-        return this.taxi.current + deltaAfterRoute >= this.taxi.capacity
+        return this.taxi.current + deltaAfterRoute >= Taxi.CAPACITY
     }
 
     arrivedAtStop(stop) {
@@ -127,68 +170,49 @@ export class Router {
     }
 }
 
-function beamSearch(beam, from, stops, left) {
-    const distancesByStops = stops
-        .map((viaStop) => {
-            const distance = getDistance(from, viaStop.point)
-
-            if (beam === 0 || stops.length === 1) {
-                return { distance, route: [viaStop] }
-            }
-
-            let availableStops = stops.filter((s) => s !== viaStop)
-
-            if (left === 0) {
-                availableStops = availableStops.filter((s) =>
-                    s.demand ? s.demand.state === STATE.SELECTED : true
-                )
-            }
-
-            let leftAfterStop = left
-
-            if (viaStop.demand?.state === STATE.SELECTED) {
-                availableStops.push({
-                    point: viaStop.demand.to,
-                })
-                leftAfterStop = left - 1
-            }
-
-            if (viaStop.demand?.state === STATE.PICKED) {
-                leftAfterStop = left + 1
-            }
-
-            try {
-                const beamChildren = beamSearch(
-                    beam - 1,
-                    viaStop.point,
-                    availableStops,
-                    leftAfterStop
-                )
-
-                return {
-                    distance: beamChildren.distance + distance,
-                    route: [viaStop, ...beamChildren.route],
-                }
-            } catch (e) {
-                return null
-            }
-        })
-        .filter((r) => r)
-        .sort((a, b) => a.distance - b.distance)
-
-    const maxRouteLength = Math.max(
-        ...distancesByStops.map((r) => r.route.length)
-    )
-
-    const maxRoutes = distancesByStops.filter(
-        (r) => r.route.length === maxRouteLength
-    )
-
-    if (!maxRoutes[0]) {
-        throw new Error('No available routes')
+function beamSearch(beamSize, currentPoint, stopPoints, leftSeats) {
+    if (beamSize === 0 || stopPoints.length === 0) {
+        return {
+            travelLength: 0,
+            route: [],
+        }
     }
 
-    return maxRoutes[0]
+    const travelPathByNextPoint = stopPoints.map((candidate) => {
+        const distanceFromCurrentPoint = getDistance(
+            candidate.point,
+            currentPoint
+        )
+
+        let nextLeftPoints = stopPoints.filter((point) => point !== candidate)
+
+        if (candidate.next) {
+            nextLeftPoints = [...nextLeftPoints, candidate.next]
+        }
+
+        const nextLeftSheets = leftSeats - candidate.seatDelta
+
+        const leftMinimumTravelPath = beamSearch(
+            beamSize - 1,
+            candidate.point,
+            [...nextLeftPoints],
+            nextLeftSheets
+        )
+
+        const travelPathByCurrentPoint = {
+            travelLength:
+                distanceFromCurrentPoint + leftMinimumTravelPath.travelLength,
+            route: [candidate, ...leftMinimumTravelPath.route],
+        }
+
+        return travelPathByCurrentPoint
+    })
+
+    const minimumTravelPath = travelPathByNextPoint.toSorted(
+        (a, b) => a.travelLength - b.travelLength
+    )[0]
+
+    return minimumTravelPath
 }
 
 class RouterRenderer {
@@ -201,9 +225,9 @@ class RouterRenderer {
 
     newRoute(stops) {
         this.lines.forEach((line) => line.remove())
-
         const route = stops.map((stop) => stop.point)
 
+        this.drawLine(this.router.taxi.position, route[0])
         for (let i = 0; i < route.length - 1; i++) {
             this.drawLine(route[i], route[i + 1])
         }
@@ -215,6 +239,11 @@ class RouterRenderer {
         line.classList.add('line')
         line.style.setProperty('left', from[0] + 'px')
         line.style.setProperty('top', from[1] + 'px')
+
+        const color = this.router.taxi.color
+        if (color) {
+            line.style.setProperty('border-color', color)
+        }
 
         const angle = Math.atan2(to[1] - from[1], to[0] - from[0])
         const distance = getDistance(from, to)

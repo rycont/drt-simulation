@@ -34,13 +34,13 @@ export class Demand {
             this.fromElement.classList.add('active')
         } else if (state === STATE.PICKED) {
             this.fromElement.classList.remove('active')
-            this.fromElement.classList.add('inactive')
+            this.fromElement.remove()
 
             this.toElement.classList.remove('inactive')
             this.toElement.classList.add('active')
         } else if (state === STATE.DROPPED) {
             this.toElement.remove()
-            this.fromElement.remove()
+            // this.fromElement.remove()
         }
     }
 
@@ -49,6 +49,8 @@ export class Demand {
 
         world.element.append(this.fromElement)
         world.element.append(this.toElement)
+
+        this.grow()
     }
 
     onFromChange(from) {
@@ -70,5 +72,26 @@ export class Demand {
 
     clone() {
         return new Demand(this.from, this.to)
+    }
+
+    grow() {
+        let size = 10
+        let growingTarget = this.fromElement
+
+        const growingInterval = setInterval(() => {
+            size += 1
+
+            growingTarget.style.setProperty('width', size + 'px')
+            growingTarget.style.setProperty('height', size + 'px')
+        }, 1000)
+
+        this.watchable.onChange('state', (state) => {
+            if (state === STATE.DROPPED) {
+                clearInterval(growingInterval)
+            } else if (state === STATE.PICKED) {
+                growingTarget = this.toElement
+                size = 10
+            }
+        })
     }
 }

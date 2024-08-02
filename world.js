@@ -13,17 +13,20 @@ export class World {
         this.element = element
     }
 
-    async addDemand(demand) {
+    addDemand(demand) {
         const notBusyTaxis = this.taxis.filter((taxi) => !taxi.isBusy())
-        if (notBusyTaxis.length === 0) throw new Error('No available taxis')
+        if (notBusyTaxis.length === 0) {
+            throw new Error('No available taxis')
+        }
 
         const receptivities = notBusyTaxis
             .map((taxi) => ({
                 taxi,
-                receptivity: taxi.router.getExtendedPathWithNewDemand(demand),
+                extendedLength:
+                    taxi.router.getExtendedLengthWithNewDemand(demand),
             }))
-            .filter((r) => r.receptivity !== 0)
-            .sort((a, b) => a.receptivity - b.receptivity)
+            .filter((r) => r.extendedLength !== 0)
+            .sort((a, b) => a.extendedLength - b.extendedLength)
 
         if (receptivities.length === 0) throw new Error('No available taxis')
 
